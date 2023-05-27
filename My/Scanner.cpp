@@ -4,14 +4,13 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-
+#include <cctype>
 #include "Scanner.h"
 
 #include <iostream>
 using namespace std;
 
-extern FILE *sourceFile;                       // miniC source program
+extern FILE *sourceFile;                       // miniC source program, Main.cpp의 전역변수 호출
 
 
 int superLetter(char ch);

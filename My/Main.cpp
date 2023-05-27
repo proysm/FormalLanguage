@@ -5,7 +5,6 @@
 
 #include "Scanner.h"
 
-#include <iostream>
 using namespace std;
 
 void icg_error(int n);
@@ -22,14 +21,14 @@ void main(int argc, char *argv[])
 	char fileName[FILE_LEN];
 	int err;
 
-	cout << " *** start of Mini C Compiler\n";
+	printf(" *** start of Mini C Compiler\n");
 	if (argc != 2) {
 		icg_error(1);
 		exit(1);
 	}
 	//strcpy_s(fileName, argv[1]);
 
-	cout << "   * source file name: " << fileName << "\n";
+	printf("   * source file name: %30s\n", fileName);
 
 	//err = fopen_s(&sourceFile, fileName, "r");
 	if (err != 0) {
@@ -40,34 +39,34 @@ void main(int argc, char *argv[])
 	
 	struct tokenType token;
 	
-	cout << " === start of Scanner\n";
+	printf(" === start of Scanner\n");
 	
 	token = scanner();
 	
 	while (token.number != teof) {
 
-		cout << "Current Token --> ";
+		printf("Current Token --> \n");	
 		printToken(token);
 		token = scanner();
 		
 	} /* while (1) */
 
 
-	cout << " === start of Parser\n";
-	cout << " > Not yet implemented...\n";
+	printf(" === start of Parser\n");
+	printf(" > Not yet implemented...\n");
 	//root = parser();
 	//printTree(root, 0);
 	
-	cout << " === start of ICG\n";
-	cout << " > Not yet implemented...\n";
+	printf(" === start of ICG\n");
+	printf(" > Not yet implemented...\n");
 
 	//codeGen(root);
-	cout << " *** end   of Mini C Compiler\n";
+	printf(" *** end   of Mini C Compiler\n");
 } // end of main
 
 void icg_error(int n)
 {
-	cout << "icg_error: " << n << "\n";
+	printf("icg_error: %d\n", n);
 	//3: cout << "A Mini C Source file must be specified.!!!\n";
 	//"error in DCL_SPEC"
 	//"error in DCL_ITEM"

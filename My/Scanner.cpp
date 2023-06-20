@@ -4,21 +4,22 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <string>
 #include <cctype>
 #include "Scanner.h"
 
-#include <iostream>
+#define _CRT_SECURE_NO_WARNINGS
 using namespace std;
+ 
+extern int line, column;                       // (Expand)
 
 extern FILE *sourceFile;                       // miniC source program, Main.cpp의 전역변수 호출
-
 
 int superLetter(char ch);
 int superLetterOrDigit(char ch);
 int getNumber(char firstCharacter);
 int hexValue(char ch);
 void lexicalError(int n);
-
 
 char *tokenName[] = {
 	"!",        "!=",      "%",       "%=",     "%ident",   "%number",
@@ -32,63 +33,172 @@ char *tokenName[] = {
 	"==",       ">",       ">=",      "[",      "]",        "eof",
 	/* 24         25         26        27         28         29        */
 	//   ...........    word symbols ................................. //
+	"const",    "else",     "if",      "int",     "return",  "void",	
 	/* 30         31         32        33         34         35        */
-	"const",    "else",     "if",      "int",     "return",  "void",
+	"while",    "{",        "||",      "}",
 	/* 36         37         38        39                              */
-	"while",    "{",        "||",       "}"
+	//   ...........    (Expand)     ................................. //
+	"char",     "double",    "for",      "do",      "goto",     "switch",  
+	/* 40        41          42           43         44          45    */
+	"case",     "break",    "default",   "%char",   "%string",  "%realnum",
+	/* 46        47          48           49         50          51    */
+	":"
+	/* 52                                                              */
 };
 
+
 char *keyword[NO_KEYWORD] = {
-	"const",  "else",    "if",    "int",    "return",  "void",    "while"
+	"const",   "else",     "if",     "int",     "return",  "void",    "while",
+	//   ......................    (Expand)   .......................  //
+	"char",    "double",   "for",    "do",      "goto",    "switch",
+	"case",    "break",    "default"
 };
 
 enum tsymbol tnum[NO_KEYWORD] = {
-	tconst,    telse,     tif,     tint,     treturn,   tvoid,     twhile
+	tconst,    telse,     tif,     tint,     treturn,   tvoid,     twhile,
+	//   ......................    (Expand)   .......................  //
+	tchar,     tdouble,   tfor,    tdo,      tgoto,     tswitch,   tcase,     tbreak,    tdefault
 };
 
 struct tokenType scanner()
 {
 	struct tokenType token;
 	int i, index;
-	char ch, id[ID_LENGTH];
+	char ch, id[ID_LENGTH], realnumid[ID_LENGTH]; // (Expand)
 
 	token.number = tnull;
 
 	do {
-		while (isspace(ch = fgetc(sourceFile)));	// state 1: skip blanks
+		while (isspace(ch = fgetc(sourceFile))){ // state 1: skip blanks	
+			
+			//   ...........   (Expand)  ............  //
+			// printf("%d ", ch);   // for debug
+			if(ch == 13){
+				line++;
+				column=0;
+			}
+		}
+		column++;
 		if (superLetter(ch)) { // identifier or keyword
 			i = 0;
 			do {
 				if (i < ID_LENGTH) id[i++] = ch;
 				ch = fgetc(sourceFile);
-			} while (superLetterOrDigit(ch));
+			} while (superLetterOrDigit(ch)); 
+
 			if (i >= ID_LENGTH) lexicalError(1);
 			id[i] = '\0';
 			ungetc(ch, sourceFile);  //  retract
-									 // find the identifier in the keyword table
+
+			// find the identifier in the keyword table
 			for (index = 0; index < NO_KEYWORD; index++)
 				if (!strcmp(id, keyword[index])) break;
 			if (index < NO_KEYWORD)    // found, keyword exit
 				token.number = tnum[index];
 			else {                     // not found, identifier exit
 				token.number = tident;
-				//strcpy_s(token.value.id, id);
+				strcpy(token.value.id, id);
 			}
 		}  // end of identifier or keyword
+
+		//   ...........   (Expand)  ............  //
 		else if (isdigit(ch)) {  // number
-			token.number = tnumber;
-			token.value.num = getNumber(ch);
+			i = 0;
+			do{
+				if (i < ID_LENGTH) realnumid[i++] = ch;
+				ch = fgetc(sourceFile);
+			} while (isdigit(ch));
+
+			if (i >= ID_LENGTH) lexicalError(1);
+
+			if(ch == '.'){     //  double literal
+				do{
+					if (i < ID_LENGTH) realnumid[i++] = ch;
+					ch = fgetc(sourceFile);
+				} while (isdigit(ch));
+
+				if(ch == 'E' || ch == 'e') {
+					realnumid[i++] = ch;
+					ch = fgetc(sourceFile);
+					if(ch == '+' || ch == '-'){
+						realnumid[i++] = ch;
+						ch = fgetc(sourceFile);
+						if(isdigit(ch)){
+							do{
+								realnumid[i++] = ch;
+								ch = fgetc(sourceFile);
+							} while(isdigit(ch));
+						}
+						else lexicalError(7);
+					}
+					else if(isdigit(ch)){
+						do{
+							realnumid[i++] = ch;
+							ch = fgetc(sourceFile);
+						} while(isdigit(ch));
+					}
+					else lexicalError(8);
+				}
+
+				ungetc(ch, sourceFile);
+				realnumid[i] = '\0';
+				token.number = trealnum;
+				strcpy(token.value.id, realnumid);
+
+			}
+			else {                     //  integer
+				for (int x = i - 1; x > 0; x--) {
+					ungetc(realnumid[x], sourceFile);
+				}
+				ch = realnumid[0];
+				token.number = tnumber;
+				strcpy(token.value.id, realnumid);
+				token.value.num = getNumber(ch);
+				
+			}
 		}
+
+		//   ...........   (Expand)  ............  //
 		else switch (ch) {  // special character
 		case '/':
 			ch = fgetc(sourceFile);
-			if (ch == '*')			// text comment
-				do {
-					while (ch != '*') ch = fgetc(sourceFile);
-					ch = fgetc(sourceFile);
-				} while (ch != '/');
-			else if (ch == '/')		// line comment
-				while (fgetc(sourceFile) != '\n');
+			if (ch == '*'){             // text comment
+				ch = fgetc(sourceFile);
+				if(ch == '*'){          // documented comments (/** ~ */)
+					printf("Documented Comments ------> ");
+					do{
+						while (ch != '*') {
+							printf("%c", ch);
+							ch = fgetc(sourceFile);
+						}
+						ch = fgetc(sourceFile);
+					} while (ch != '/');
+					printf("\n");
+				}
+				else{
+					do {
+						while (ch != '*') ch = fgetc(sourceFile);
+						ch = fgetc(sourceFile);
+					} while (ch != '/');
+				}
+			}					
+			else if (ch == '/'){		// line comment
+				ch = fgetc(sourceFile);
+				if (ch == '/'){         // single line documented comments (///)
+					printf("Documented Comments ------> ");
+					do{
+						ch = fgetc(sourceFile);
+						printf("%c", ch);
+					} while (ch != '\n');
+					printf("\n");
+				}
+				else {
+					while (fgetc(sourceFile) != '\n');
+					ch = 13; // retract
+					ungetc(ch, sourceFile);
+					printf("here%c", ch);
+				}
+			}
 			else if (ch == '=')  token.number = tdivAssign;
 			else {
 				token.number = tdiv;
@@ -187,6 +297,50 @@ struct tokenType scanner()
 		case ']': token.number = trbracket;       break;
 		case '{': token.number = tlbrace;         break;
 		case '}': token.number = trbrace;         break;
+		//   ...........   (Expand)  ............  //
+		case ':'  : token.number = tcolon;        break;
+		case '\'' :                                // character literal
+			i = 0;
+			ch = fgetc(sourceFile);
+			token.number = tcharacter;
+
+			token.value.id[i++] = ch;
+			token.value.id[i++] = '\0';
+			token.value.id[i] = '\0';
+			ch = fgetc(sourceFile);
+			if(ch != '\'') lexicalError(5);
+			break;
+		case '"'  :                                // string literal
+			i = 0;
+			ch = fgetc(sourceFile);
+			while(ch != '"'){
+				if(i < ID_LENGTH) id[i++] = ch;
+				ch = fgetc(sourceFile);
+			}
+			if(i >= ID_LENGTH) lexicalError(1);
+			id[i] = '\0';
+
+			if(ch == '"'){	
+				token.number = tstring;
+				strcpy(token.value.id, id);
+			}
+			else lexicalError(6);
+			break;
+
+		case '.'  :                               // double literal (short form : .123)
+			i = 0;
+			do {
+				if (i < ID_LENGTH) realnumid[i++] = ch;
+				ch = fgetc(sourceFile);
+			} while (isdigit(ch)); 
+
+			if (i >= ID_LENGTH) lexicalError(1);
+
+			ungetc(ch, sourceFile);
+			realnumid[i] = '\0';
+			token.number = trealnum;
+			strcpy(token.value.id, realnumid);
+			break;
 		case EOF: token.number = teof;            break;
 		default: {
 			printf("Current character : %c", ch);
@@ -210,6 +364,15 @@ void lexicalError(int n)
 	case 3: printf("next character must be |\n");
 		break;
 	case 4: printf("invalid character\n");
+		break;
+	//   ...........   (Expand)  ............  //
+	case 5 : printf("next character must be \'\n");
+		break;
+	case 6 : printf("next character must be \"\n");
+		break;
+	case 7 : printf("next character must be digit\n");
+		break;
+	case 8 : printf("next character must be '+' or '-'\n");
 		break;
 	}
 }
@@ -270,13 +433,31 @@ int hexValue(char ch)
 	}
 }
 
-void printToken(struct tokenType token)
+//   ...........   (Expand)  ............  //
+//   Token -----> int (token number, token value, file name, line number, column number)
+void printToken(struct tokenType token, char* fileName)
 {
-	if (token.number == tident)
-		printf("number: %d, value: %s\n", token.number, token.value.id);
-	else if (token.number == tnumber)
-		printf("number: %d, value: %d\n", token.number, token.value.num);
-	else
-		printf("number: %d(%s)\n", token.number, tokenName[token.number]);
+	if (token.number == tident
+		|| token.number == trealnum
+		|| token.number == tcharacter
+		|| token.number == tstring){
+		printf("Token -----> %12s (", tokenName[token.number]);
+		printf("%2d, %8s, %12s, %2d, %2d", 
+				token.number, token.value.id, fileName, line, column);
+		printf(")\n");
+	}
+	else if (token.number == tnumber){
+		printf("Token -----> %12s (", tokenName[token.number]);
+		printf("%2d, %8d, %12s, %2d, %2d", 
+				token.number, token.value.num, fileName, line, column);
+		printf(")\n");
+	}
+	else{
+		printf("Token -----> %12s (", tokenName[token.number]);
+		printf("%2d, %8s, %12s, %2d, %2d", 
+				token.number, tokenName[token.number], fileName, line, column);
+		printf(")\n");
+	}
+
 
 }

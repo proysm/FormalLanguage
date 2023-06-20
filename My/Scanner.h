@@ -1,14 +1,16 @@
 /***************************************************************
 *      scanner routine for Mini C language                    *
 *                                       컴퓨터공학과 유수민        *
-*                                          2023. 5. 28        *
+*                                          2023. 5. 29        *
 ***************************************************************/
 
 #pragma once // 컴파일러가 한 번만 컴파일 하도록 명령
 
 
-#define NO_KEYWORD 16 // (확장) 7 -> 16
+#define NO_KEYWORD 16 // (Expand) 7 -> 16
 #define ID_LENGTH 12
+
+
 
 struct tokenType {
 	int number;
@@ -36,13 +38,15 @@ enum tsymbol {
 	/* 30        31          32          33          34           35       */
 	twhile,      tlbrace,    tor,        trbrace,
 	/* 36        37          38          39                                */
-	//   ...........    (확장) 추가 키워드 ................................... //
-	tchar,       tdouble,    tfor,       tdo,        tgoto,       tswitch,   
+	//   ...........    (Expand) Keyword ................................. //
+	tchar,       tdouble,    tfor,       tdo,        tgoto,      tswitch,   
 	/* 40        41          42          43          44           45       */
-	tcase,       tbreak,     tdefault
-	/* 46        47          48                                            */
+	tcase,       tbreak,     tdefault,   tcharacter, tstring,    trealnum,
+	/* 46        47          48          49          50           51       */
+	tcolon
+	/* 52                                                                  */
 };
 
 
 struct tokenType scanner();
-void printToken(struct tokenType token);
+void printToken(struct tokenType token, char* fileName);

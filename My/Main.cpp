@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+
 #include "Scanner.h"
 
 using namespace std;
@@ -13,40 +14,43 @@ void icg_error(int n);
 FILE *astFile;                          // AST file
 FILE *sourceFile;                       // miniC source program
 FILE *ucodeFile;                        // ucode file
+int line, column;                       // (Expand)
 
 #define FILE_LEN 30
 
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	char fileName[FILE_LEN];
 	int err;
 
+	
 	printf(" *** start of Mini C Compiler\n");
 	if (argc != 2) {
 		icg_error(1);
 		exit(1);
 	}
-	//strcpy_s(fileName, argv[1]);
+	strcpy(fileName, argv[1]);
 
 	printf("   * source file name: %30s\n", fileName);
 
-	//err = fopen_s(&sourceFile, fileName, "r");
-	if (err != 0) {
+	sourceFile = fopen(fileName, "r");
+	if (sourceFile == NULL) {
 		icg_error(2);
 		exit(1);
 	}
 	
-	
+	//   ...........   (Expand)  ............  //
 	struct tokenType token;
 	
 	printf(" === start of Scanner\n");
 	
 	token = scanner();
 	
+	line = column = 1;
 	while (token.number != teof) {
 
-		printf("Current Token --> \n");	
-		printToken(token);
+		//printf("Current Token --> \n");	
+		printToken(token, fileName);
 		token = scanner();
 		
 	} /* while (1) */
